@@ -1,41 +1,26 @@
 import numpy as np
 from numpy.linalg import norm
-from matplotlib import pyplot as plt
+
+# from scipy.spatial.distance import cdist
+import plotly.graph_objects as go
 
 
 def EstimateCorrespondences(X, Y, t, R, d_max):
-    C = []  # Unknown size
-    # C = np.empty((0,2))  # Unknown size
-    # Assuming rows are the points
-    for i, x in enumerate(X):
-        # Calculate size of diff separately
-        res = norm(Y - (R.dot(x) + t), axis=1)
-        
-        # Get index
-        j = np.argmin(res**2)
+    C = np.empty((0, 2), dtype=int)  # Unknown size
+    X_trans = (R @ X.T).T + t
+    for i, x_trans in enumerate(X_trans):
+        j = np.argmin(norm(Y - x_trans, axis=1) ** 2)
 
-        # Add index
-        if res[j] < d_max:
-            # Drop Y[i,:] from the array??
-            # int(j) ?
-            # C = np.vstack((C, [i,j]))
-            
-            # If C is list, just append a tuple
-            C.append((i, j))
+        if norm(Y[j] - x_trans) < d_max:
+            C = np.vstack((C, [i, j]))
 
     return C
 
-
 def ComputeOptimalRigidRegistration(X, Y, C):
     # If C is matrix
-    # K = C.shape[0]
-    # i_list = C[:,0]
-    # j_list = C[:,1]
-    
-    # If C is list of tuples
-    K = len(C)
-    i_list = [i for i, _ in C]
-    j_list = [j for _, j in C]
+    K = C.shape[0]
+    i_list = C[:, 0]
+    j_list = C[:, 1]
 
     x_mean = np.sum(X[i_list, :], axis=0) / K
     y_mean = np.sum(Y[j_list, :], axis=0) / K
@@ -83,22 +68,52 @@ if __name__ == "__main__":
 
     t, R, C = ICP(X, Y, t0, R0, d_max, num_ICP_iters)
 
-    # If C is array
-    # K = C.shape[0]
-    # i_list = C[:,0]
-    # j_list = C[:,1]
-    
-    # If C is list of tuples
-    K = len(C)
-    i_list = [i for i, _ in C]
-    j_list = [j for _, j in C]
+    K = C.shape[0]
+    i_list = C[:, 0]
+    j_list = C[:, 1]
 
-    RMSE = np.sqrt((1 / K) * (norm(Y[j_list, :] - ((R @ X[i_list, :].T).T + t)) ** 2))
+    RMSE = np.sqrt(
+        (1 / K) * np.sum(norm(Y[j_list, :] - ((R @ X[i_list, :].T).T + t), axis=1) ** 2)
+    )
 
-    # Plotting
     X_trans = (R @ X.T).T + t
 
-    fig = plt.figure()
-    ax = fig.add_subplot(projection="3d")
-    ax.scatter(Y[:, 0], Y[:, 1], Y[:, 2], c="red", alpha=0.7)
-    ax.scatter(X_trans[:, 0], X_trans[:, 1], X_trans[:, 2], c="green", alpha=0.7)
+    fig = go.Figure(
+        data=[
+            go.Scatter3d(
+                x=Y[:, 0],
+                y=Y[:, 1],
+                z=Y[:, 2],
+                mode="markers",
+                marker_size=2,
+                marker_color="blue",
+                name="Y points",
+            ),
+            go.Scatter3d(
+                x=X_trans[:, 0],
+                y=X_trans[:, 1],
+                z=X_trans[:, 2],
+                mode="markers",
+                marker_size=2,
+                marker_color="green",
+                name="X points transformed",
+            ),
+            go.Scatter3d(
+                x=X[:, 0],
+                y=X[:, 1],
+                z=X[:, 2],
+                mode="markers",
+                marker_size=2,
+                marker_color="red",
+                name="X points",
+            ),
+        ]
+    )
+
+    fig.update_layout(legend_itemwidth=200, legend_itemsizing="constant")
+
+    fig.show()
+
+    print(R)
+    print(t)
+    print(RMSE)
