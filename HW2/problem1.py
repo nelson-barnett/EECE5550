@@ -59,25 +59,25 @@ if __name__ == "__main__":
             v_t = vels[3]
 
         # Prediction
-        x_t1, mu_t1, sigma_t1 = update_state(mu_t, v_t, dt, sigma_t, R)
+        x_t, mu_t, sigma_t = update_state(mu_t, v_t, dt, sigma_t, R)
 
         # Measurement
-        z_t1 = take_measurement(x_t1, L, Q)
+        z_t = take_measurement(x_t, L, Q)
 
         # Update
-        H = measurement_jacobian(mu_t1, L)
-        K = kalman_gain(sigma_t1, H, Q)
+        H = measurement_jacobian(mu_t, L)
+        K = kalman_gain(sigma_t, H, Q)
 
-        mu_t = mu_t1 + K @ (z_t1 - take_measurement(mu_t1, L))
-        sigma_t = (np.eye(len(mu_t1)) - K @ H) @ sigma_t1
+        mu_t = mu_t + K @ (z_t - take_measurement(mu_t, L))
+        sigma_t = (np.eye(len(mu_t)) - K @ H) @ sigma_t
 
         # Store
-        true_locs[i] = x_t1
+        true_locs[i] = x_t
         loc_means[i] = mu_t
         loc_stds[i] = np.sqrt(np.diag(sigma_t))
 
     # Plot
-    fig = plt.figure(figsize=(13, 13))
+    fig = plt.figure(figsize=(13, 10))
     ax = fig.add_subplot()
     ax.errorbar(
         loc_means[:, 0],
