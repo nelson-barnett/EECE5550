@@ -29,17 +29,15 @@ def particle_filter_prop(t1, Xt1, phidot_l, phidot_r, t2, r, w, sigma_l, sigma_r
 
 
 def particle_filter_update(Xt, zt, sigma_p):
-    X_bar_t = []
+    rng = np.random.default_rng()
+    W = np.zeros(len(Xt))
     for i, xt in enumerate(Xt):
         res = zt - xt[:-1, -1]
-        w = (1 / (2 * np.pi * (sigma_p**2))) * np.exp(
+        W[i] = (1 / (2 * np.pi * (sigma_p**2))) * np.exp(
             (-(sigma_p**2) / 2) * (res.T.dot(res))
         )
 
-        # This is probably wrong:
-        X_bar_t.append(w * xt)
-
-    return X_bar_t
+    return rng.choice(Xt, len(Xt), p=W / sum(W))
 
 
 if __name__ == "__main__":
@@ -65,37 +63,10 @@ if __name__ == "__main__":
     ax = fig.add_subplot()
     ax.scatter(X10_position[:, 0], X10_position[:, 1], s=1, c="blue")
     ax.scatter(position_mean[0], position_mean[1], s=5, c="red")
-    ax.set_title(
-        f"Scatterplot at t = 10.\nMean = {position_mean}, cov = {position_cov}"
-    )
+    ax.set_title("Part (e): Scatterplot at t = 10")
     plt.show(block=False)
 
-    # (f) 1 (this may not be what is meant)
-    times = [5, 10, 15, 20]
-    colors = ["green", "blue", "purple", "cyan"]
-
-    fig = plt.figure()
-    ax = fig.add_subplot()
-    means = np.zeros((len(times), 2))
-    covs = []
-    for i, t in enumerate(times):
-        Xt = particle_filter_prop(0, X0, phidot_l, phidot_r, t, r, w, sigma_l, sigma_r)
-        Xt_position = np.asarray([x[:-1, -1] for x in Xt])
-        position_mean = Xt_position.mean(axis=0)
-        position_cov = np.cov(Xt_position.T)
-
-        means[i] = position_mean
-        covs.append(position_cov)
-
-        ax.scatter(
-            Xt_position[:, 0], Xt_position[:, 1], s=1, c=colors[i], label=f"t = {t}"
-        )
-        ax.scatter(position_mean[0], position_mean[1], s=5, c="red")
-
-    ax.legend(loc="upper left", bbox_to_anchor=(1, 1), markerscale=3)
-    plt.show()
-
-    # (f) 2 (this is probably what is meant)
+    # (f)
     times = [0, 5, 10, 15, 20]
     colors = ["green", "blue", "purple", "cyan"]
 
@@ -120,8 +91,9 @@ if __name__ == "__main__":
         )
         ax.scatter(position_mean[0], position_mean[1], s=5, c="red")
 
-    ax.legend(loc="upper left", bbox_to_anchor=(1, 1), markerscale=3)
-    plt.show()
+    ax.set_title("Part (f): Dead reckoning")
+    ax.legend(markerscale=5)
+    plt.show(block=False)
 
     # (g)
     measurements = np.array(
@@ -136,9 +108,9 @@ if __name__ == "__main__":
         Xt = particle_filter_prop(
             t, Xt, phidot_l, phidot_r, times[i + 1], r, w, sigma_l, sigma_r
         )
-        
+
         Xt = particle_filter_update(Xt, measurements[i], sigma_p)
-        
+
         Xt_position = np.asarray([x[:-1, -1] for x in Xt])
         position_mean = Xt_position.mean(axis=0)
         position_cov = np.cov(Xt_position.T)
@@ -151,5 +123,6 @@ if __name__ == "__main__":
         )
         ax.scatter(position_mean[0], position_mean[1], s=5, c="red")
 
-    ax.legend(loc="upper left", bbox_to_anchor=(1, 1), markerscale=3)
-    plt.show()
+    ax.set_title("Part (g): Using filtered estimates from measurements")
+    ax.legend(markerscale=5)
+    plt.show(block=False)
