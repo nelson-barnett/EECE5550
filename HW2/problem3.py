@@ -8,8 +8,8 @@ def particle_filter_prop(t1, Xt1, phidot_l, phidot_r, t2, r, w, sigma_l, sigma_r
 
     X_tnext = []
     for xi in Xt1:
-        noise_l = rng.normal(0, sigma_l**2)
-        noise_r = rng.normal(0, sigma_r**2)
+        noise_l = rng.normal(0, sigma_l)
+        noise_r = rng.normal(0, sigma_r)
 
         omega_dot = np.array(
             [
@@ -34,7 +34,7 @@ def particle_filter_update(Xt, zt, sigma_p):
     for i, xt in enumerate(Xt):
         res = zt - xt[:-1, -1]
         W[i] = (1 / (2 * np.pi * (sigma_p**2))) * np.exp(
-            (-(sigma_p**2) / 2) * (res.T.dot(res))
+            (-1 / (2 * sigma_p**2)) * (res.T.dot(res))
         )
 
     return rng.choice(Xt, len(Xt), p=W / sum(W))
@@ -49,7 +49,7 @@ if __name__ == "__main__":
     sigma_r = 0.05
     sigma_p = 0.1
 
-    # (e)
+    ####### (e) #######
     N = 1000
     x0 = np.eye(3)
     X0 = [x0 for _ in range(N)]
@@ -66,7 +66,7 @@ if __name__ == "__main__":
     ax.set_title("Part (e): Scatterplot at t = 10")
     plt.show(block=False)
 
-    # (f)
+    ####### (f) #######
     times = [0, 5, 10, 15, 20]
     colors = ["green", "blue", "purple", "cyan"]
 
@@ -95,7 +95,7 @@ if __name__ == "__main__":
     ax.legend(markerscale=5)
     plt.show(block=False)
 
-    # (g)
+    ####### (g) #######
     measurements = np.array(
         [[1.6561, 1.2847], [1.0505, 3.1059], [-0.9875, 3.2118], [-1.645, 1.1978]]
     )
