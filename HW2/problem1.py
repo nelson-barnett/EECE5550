@@ -5,11 +5,13 @@ from numpy.random import multivariate_normal
 
 
 def update_state(mu_t, u_t, dt, sigma, R):
+    # Returns noisy pose, not-noisy pose, and covariance
     mu_t1 = mu_t + dt * u_t
     return mu_t1 + multivariate_normal([0, 0], R), mu_t1, sigma + R
 
 
 def take_measurement(p, L, Q=None):
+    # Return measurement with noise if cov (Q) is given, else non-noisy measurement
     delta = 0 if Q is None else multivariate_normal([0, 0], Q)
     return np.array([norm(p - L[0]), norm(p - L[1])]) + delta
 
@@ -77,7 +79,7 @@ if __name__ == "__main__":
         loc_stds[i] = np.sqrt(np.diag(sigma_t))
 
     # Plot
-    fig = plt.figure(figsize=(13, 10))
+    fig = plt.figure(figsize=(10, 10))
     ax = fig.add_subplot()
     ax.errorbar(
         loc_means[:, 0],

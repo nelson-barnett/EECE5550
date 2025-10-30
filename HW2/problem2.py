@@ -1,7 +1,5 @@
 import numpy as np
 from numpy.linalg import norm
-
-# from scipy.spatial.distance import cdist
 import plotly.graph_objects as go
 
 
@@ -9,35 +7,44 @@ def EstimateCorrespondences(X, Y, t, R, d_max):
     C = np.empty((0, 2), dtype=int)  # Unknown size
     X_trans = (R @ X.T).T + t
     for i, x_trans in enumerate(X_trans):
+        # Find ind of closest value in y to current transformed pose
         j = np.argmin(norm(Y - x_trans, axis=1) ** 2)
 
+        # Check min dist is met and add to output if it is
         if norm(Y[j] - x_trans) < d_max:
             C = np.vstack((C, [i, j]))
 
     return C
 
+
 def ComputeOptimalRigidRegistration(X, Y, C):
-    # If C is matrix
+    # Get useful values from C
     K = C.shape[0]
     i_list = C[:, 0]
     j_list = C[:, 1]
 
+    # Get centroid
     x_mean = np.sum(X[i_list, :], axis=0) / K
     y_mean = np.sum(Y[j_list, :], axis=0) / K
 
+    # Mean-zero
     Xp = X[i_list, :] - x_mean
     Yp = Y[j_list, :] - y_mean
 
+    # Covariance
     W = (Xp.T @ Yp) / K
 
+    # SVD
     U, Sigma, Vt = np.linalg.svd(W)
 
+    # Build diagonal matrix
     tmp = np.eye(len(Sigma))
     tmp[-1, -1] = np.linalg.det(U @ Vt.T)
 
+    # Find rotation
     R = U @ tmp @ Vt
 
-    return (y_mean - R @ x_mean, R)
+    return y_mean - R @ x_mean, R
 
 
 def ICP(X, Y, t0, R0, d_max, num_ICP_iters):
@@ -48,7 +55,7 @@ def ICP(X, Y, t0, R0, d_max, num_ICP_iters):
         C = EstimateCorrespondences(X, Y, t_hat, R_hat, d_max)
         t_hat, R_hat = ComputeOptimalRigidRegistration(X, Y, C)
 
-    return (t_hat, R_hat, C)
+    return t_hat, R_hat, C
 
 
 if __name__ == "__main__":
@@ -66,18 +73,23 @@ if __name__ == "__main__":
     d_max = 0.25
     num_ICP_iters = 30
 
+    # Run ICP
     t, R, C = ICP(X, Y, t0, R0, d_max, num_ICP_iters)
 
+    # Extract values from C
     K = C.shape[0]
     i_list = C[:, 0]
     j_list = C[:, 1]
 
+    # Calculate error
     RMSE = np.sqrt(
         (1 / K) * np.sum(norm(Y[j_list, :] - ((R @ X[i_list, :].T).T + t), axis=1) ** 2)
     )
 
+    # Get transformed X points
     X_trans = (R @ X.T).T + t
 
+    # Build figure using plotly because it makes a nice 3D plot
     fig = go.Figure(
         data=[
             go.Scatter3d(

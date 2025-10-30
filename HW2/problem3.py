@@ -4,13 +4,16 @@ from matplotlib import pyplot as plt
 
 
 def particle_filter_prop(t1, Xt1, phidot_l, phidot_r, t2, r, w, sigma_l, sigma_r):
+    # Initialize
     rng = np.random.default_rng()
-
     X_tnext = []
+    # For each particle in Xt1 (list)
     for xi in Xt1:
+        # Compute new noise for each velocity
         noise_l = rng.normal(0, sigma_l)
         noise_r = rng.normal(0, sigma_r)
 
+        # Propagate model
         omega_dot = np.array(
             [
                 [
@@ -23,24 +26,30 @@ def particle_filter_prop(t1, Xt1, phidot_l, phidot_r, t2, r, w, sigma_l, sigma_r
             ]
         )
 
+        # TS -> G
         X_tnext.append(xi @ expm((t2 - t1) * omega_dot))
 
     return X_tnext
 
 
 def particle_filter_update(Xt, zt, sigma_p):
+    # Initialize
     rng = np.random.default_rng()
     W = np.zeros(len(Xt))
+    # For each particle in Xt
     for i, xt in enumerate(Xt):
+        # Get weight of measurement zt given particle
         res = zt - xt[:-1, -1]
         W[i] = (1 / (2 * np.pi * (sigma_p**2))) * np.exp(
             (-1 / (2 * sigma_p**2)) * (res.T.dot(res))
         )
 
+    # Sample particles with replacement from Xt given weights
     return rng.choice(Xt, len(Xt), p=W / sum(W))
 
 
 if __name__ == "__main__":
+    # Settings
     phidot_l = 1.5
     phidot_r = 2.0
     r = 0.25
@@ -48,17 +57,20 @@ if __name__ == "__main__":
     sigma_l = 0.05
     sigma_r = 0.05
     sigma_p = 0.1
-
-    ####### (e) #######
+    
+    # This is same for (e), (f), (g)
     N = 1000
     x0 = np.eye(3)
     X0 = [x0 for _ in range(N)]
-    X10 = particle_filter_prop(0, X0, phidot_l, phidot_r, 10, r, w, sigma_l, sigma_r)
 
+    ####### (e) #######
+    # Run
+    X10 = particle_filter_prop(0, X0, phidot_l, phidot_r, 10, r, w, sigma_l, sigma_r)
     X10_position = np.asarray([x[:-1, -1] for x in X10])
     position_mean = X10_position.mean(axis=0)
     position_cov = np.cov(X10_position.T)
 
+    # Plot
     fig = plt.figure()
     ax = fig.add_subplot()
     ax.scatter(X10_position[:, 0], X10_position[:, 1], s=1, c="blue")
@@ -67,62 +79,82 @@ if __name__ == "__main__":
     plt.show(block=False)
 
     ####### (f) #######
+    # Same for (f) and (g)
     times = [0, 5, 10, 15, 20]
     colors = ["green", "blue", "purple", "cyan"]
 
+    # Initialize
     fig = plt.figure()
     ax = fig.add_subplot()
     means = np.zeros((len(times), 2))
     covs = []
+    
+    # Run
     Xt = X0
     for i, t in enumerate(times[:-1]):
+        # Get next pose
         Xt = particle_filter_prop(
             t, Xt, phidot_l, phidot_r, times[i + 1], r, w, sigma_l, sigma_r
         )
+        # Extract position and stats
         Xt_position = np.asarray([x[:-1, -1] for x in Xt])
         position_mean = Xt_position.mean(axis=0)
         position_cov = np.cov(Xt_position.T)
 
+        # Store
         means[i] = position_mean
         covs.append(position_cov)
 
+        # Add to plot
         ax.scatter(
             Xt_position[:, 0], Xt_position[:, 1], s=1, c=colors[i], label=f"t = {t}"
         )
         ax.scatter(position_mean[0], position_mean[1], s=5, c="red")
 
+    # Display
     ax.set_title("Part (f): Dead reckoning")
     ax.legend(markerscale=5)
     plt.show(block=False)
 
     ####### (g) #######
+    # Setup
     measurements = np.array(
         [[1.6561, 1.2847], [1.0505, 3.1059], [-0.9875, 3.2118], [-1.645, 1.1978]]
     )
+    
+    # Initialize
     fig = plt.figure()
     ax = fig.add_subplot()
     means = np.zeros((len(times), 2))
     covs = []
+    
+    # Run
     Xt = X0
     for i, t in enumerate(times[:-1]):
+        # Propagate
         Xt = particle_filter_prop(
             t, Xt, phidot_l, phidot_r, times[i + 1], r, w, sigma_l, sigma_r
         )
 
+        # Update
         Xt = particle_filter_update(Xt, measurements[i], sigma_p)
 
+        # Get position and stats
         Xt_position = np.asarray([x[:-1, -1] for x in Xt])
         position_mean = Xt_position.mean(axis=0)
         position_cov = np.cov(Xt_position.T)
 
+        # Store
         means[i] = position_mean
         covs.append(position_cov)
 
+        # Add to plot
         ax.scatter(
             Xt_position[:, 0], Xt_position[:, 1], s=1, c=colors[i], label=f"t = {t}"
         )
         ax.scatter(position_mean[0], position_mean[1], s=5, c="red")
 
+    # Display
     ax.set_title("Part (g): Using filtered estimates from measurements")
     ax.legend(markerscale=5)
-    plt.show(block=False)
+    plt.show()
