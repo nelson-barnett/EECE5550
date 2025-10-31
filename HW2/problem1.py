@@ -48,7 +48,7 @@ if __name__ == "__main__":
     # Initialize
     mu_t = np.zeros(2)
     sigma_t = np.eye(2)
-
+    x_true = mu_t
     for i, t in enumerate(time):
         # Set vel
         if 0 <= t <= 10:
@@ -59,6 +59,9 @@ if __name__ == "__main__":
             v_t = vels[2]
         else:
             v_t = vels[3]
+
+        # True location (only used for plotting)
+        x_true = x_true + dt * v_t
 
         # Prediction
         x_t, mu_t, sigma_t = update_state(mu_t, v_t, dt, sigma_t, R)
@@ -74,27 +77,27 @@ if __name__ == "__main__":
         sigma_t = (np.eye(len(mu_t)) - K @ H) @ sigma_t
 
         # Store
-        true_locs[i] = x_t
+        true_locs[i] = x_true
         loc_means[i] = mu_t
         loc_stds[i] = np.sqrt(np.diag(sigma_t))
 
     # Plot
-    fig = plt.figure(figsize=(10, 10))
+    fig = plt.figure(figsize=(15, 8))
     ax = fig.add_subplot()
     ax.errorbar(
         loc_means[:, 0],
         loc_means[:, 1],
         xerr=3 * loc_stds[:, 0],
         yerr=3 * loc_stds[:, 1],
-        label="3*sigma estimate",
+        label="3\u03c3 estimate",
         alpha=0.6,
         markersize=2,
         capsize=3,
         elinewidth=1,
     )
-    ax.plot(true_locs[:, 0], true_locs[:, 1], "-o", label="True Traj", alpha=0.6)
-    ax.plot(loc_means[:, 0], loc_means[:, 1], "-o", label="Kalman Traj", alpha=0.6)
-    ax.scatter(L[:, 0], L[:, 1], s=20, label="Landmarks", c="red")
+    ax.plot(true_locs[:, 0], true_locs[:, 1], "-o", label="True location", alpha=0.6)
+    ax.plot(loc_means[:, 0], loc_means[:, 1], "-o", label="Kalman beliefs", alpha=0.6)
+    ax.scatter(L[:, 0], L[:, 1], s=50, label="Landmarks", c="red")
     ax.legend()
     ax.set_xlabel("x")
     ax.set_ylabel("y")

@@ -126,6 +126,6 @@ if __name__ == "__main__":
 
     fig.show()
 
-    print(R)
-    print(t)
-    print(RMSE)
+    print("R: ", R)
+    print("t: ", t)
+    print("RMSE: ", RMSE)
