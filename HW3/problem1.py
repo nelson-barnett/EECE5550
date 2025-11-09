@@ -14,8 +14,8 @@ side_length = 0.01  # meters
 # +z axis points out of page
 
 # Define 3D points using above coordinate system
-x_pos = np.arange(side_length, side_length * (n_cols + 1), side_length)
-y_pos = np.arange(side_length, side_length * (n_rows + 1), side_length)
+x_pos = np.arange(side_length, side_length * (n_rows + 1), side_length)
+y_pos = np.arange(side_length, side_length * (n_cols + 1), side_length)
 xx, yy, zz = np.meshgrid(x_pos, y_pos, 0)
 
 # Generic points for all images
@@ -26,8 +26,8 @@ U = []
 P = []
 for file in Path(data_dir).iterdir():
     # Read and convert to grayscale
-    img = cv2.imread(file)
-    img_gray = cv2.cvtColor(img, cv2.COLOR_BGR2GRAY)
+    img_gray = cv2.imread(file, cv2.IMREAD_GRAYSCALE)
+
     # Get corners
     ret, corners = cv2.findChessboardCorners(img_gray, (n_rows, n_cols), None)
 
