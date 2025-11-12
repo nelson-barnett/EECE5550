@@ -1,7 +1,7 @@
 import cv2
 import gtsam
 import gtsam.symbol_shorthand as ss
-from apriltag import apriltag
+import dt_apriltags as apriltags
 import numpy as np
 from pathlib import Path
 
@@ -51,12 +51,11 @@ def get_camera_calibration():
 
 def estimate_pose():
     image_path = "vslam/frame_0.jpg"
-
     img = cv2.imread(image_path, cv2.IMREAD_GRAYSCALE)
-    detector = apriltag("tag36h11")
 
+    detector = apriltags.Detector("tag36h11")
     detections = detector.detect(img)
-    tag0_points = detections[0]["lb-rb-rt-lt"]
+    tag0_points = detections[0].corners
 
     side_length = 0.01
     edge_to_cent = side_length / 2
@@ -70,22 +69,41 @@ def estimate_pose():
     lt3 = gtsam.Point3(-edge_to_cent, -edge_to_cent, 0)
 
     points_3d = [lb3, rb3, rt3, lt3]
-    # points_2d = [gtsam.Point2(x[0],x[1]) for x in tag0_points]
+    points_2d = [gtsam.Point2(x[0], x[1]) for x in tag0_points]
 
-    graph = gtsam.NonlinearFactorGraph()
-    init_values = gtsam.Values()
+    # Generate noise models
     constrained_noise = gtsam.noiseModel.Constrained.All(3)
     measurement_noise = gtsam.noiseModel.Isotropic.Sigma(2, 1)
-    for i, (p_pt, cam_pt) in enumerate(zip(points_3d, tag0_points)):
+    prior_noise = gtsam.noiseModel.Isotropic.Sigma(6, 1)
+
+    # Initialize nonlinear factor graph
+    graph = gtsam.NonlinearFactorGraph()
+
+    # Initialize initial values of the graph
+    init_values = gtsam.Values()
+
+    # Add prior for first pose (X(0)) -- believe both frames are aligned at t = 0
+    graph.add(gtsam.PriorFactorPose3(ss.X(0), gtsam.Pose3(), prior_noise))
+
+    # Make 4 measurements at t = 1, (all therefore correspond to the same pose -- X(1))
+    # For each measurement:
+    # 1. Add a PriorFactor of the 3D point w.r.t AprilTag coordinate frame and known side length
+    # 2. Add a factor for the reprojection error given K.
+    # ---- This is error in measurement (cam_pt) given the corresponding point (in PriorFactor at P(i))
+    # 3. Add the 3D point to the initial values
+    for i, (p_pt, cam_pt) in enumerate(zip(points_3d, points_2d), 1):
         graph.add(gtsam.PriorFactorPoint3(ss.P(i), p_pt, constrained_noise))
         graph.add(
             gtsam.GenericProjectionFactorCal3_S2(
-                cam_pt, measurement_noise, ss.X(0), ss.P(i), K
+                cam_pt, measurement_noise, ss.X(1), ss.P(i), K
             )
         )
         init_values.insert(ss.P(i), p_pt)
 
-    init_values.insert(ss.X(0), gtsam.Pose3(gtsam.Rot3(), gtsam.Point3(0, 0, -0.05)))
+    # Add initial estimates for the two poses (X(0) with no measurements and X(1) with measurements)
+    init_values.insert(ss.X(0), gtsam.Pose3())
+    init_values.insert(ss.X(1), gtsam.Pose3(gtsam.Rot3(), np.array([0, 0, -1])))
 
+    # Generate optimizer and return value at time point with measurements
     res = gtsam.LevenbergMarquardtOptimizer(graph, init_values).optimize()
-    return res.atPose3(ss.X(0))
+    return res.atPose3(ss.X(1))
