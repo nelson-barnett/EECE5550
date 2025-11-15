@@ -7,6 +7,10 @@ import cv2
 import numpy as np
 from argparse import ArgumentParser
 
+# Code can be run as a script with any combination of arguments:
+# --problem1 or -p1
+# --problem2 or -p2
+# --problem2 or -p3
 
 # Problem 1:
 def get_camera_calibration(
