@@ -3,3 +3,11 @@
 HW1
 HW2/*
 !HW2/*.py
+HW3/*
+!HW3/*.py
+HW4/*
+!HW4/*.py
+!HW4/*.ipynb
+apriltag
+lib-dt-apriltags
+gtsam
